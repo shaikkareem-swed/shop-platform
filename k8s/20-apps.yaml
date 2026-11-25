@@ -1,0 +1,285 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: shop
+spec:
+  type: LoadBalancer
+  selector: {app: api-gateway}
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: shop
+  labels: {app: api-gateway}
+spec:
+  selector:
+    matchLabels: {app: api-gateway}
+  template:
+    metadata:
+      labels: {app: api-gateway}
+    spec:
+      terminationGracePeriodSeconds: 40
+      containers:
+        - name: app
+          image: IMAGE_PREFIX/api-gateway:IMAGE_TAG
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef: {name: shop-config}
+          env:
+            - {name: SERVER_PORT, value: "8080"}
+          startupProbe:
+            httpGet: {path: /actuator/health/liveness, port: 8080}
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet: {path: /actuator/health/readiness, port: 8080}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /actuator/health/liveness, port: 8080}
+            periodSeconds: 15
+          lifecycle:
+            preStop:
+              exec: {command: ["sleep", "5"]}
+          resources:
+            requests: {cpu: 250m, memory: 512Mi}
+            limits: {cpu: "1", memory: 768Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+  namespace: shop
+spec:
+  type: ClusterIP
+  selector: {app: product-service}
+  ports:
+    - port: 8081
+      targetPort: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+  namespace: shop
+  labels: {app: product-service}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: product-service}
+  template:
+    metadata:
+      labels: {app: product-service}
+    spec:
+      terminationGracePeriodSeconds: 40
+      containers:
+        - name: app
+          image: IMAGE_PREFIX/product-service:IMAGE_TAG
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+          envFrom:
+            - configMapRef: {name: shop-config}
+          env:
+            - {name: SERVER_PORT, value: "8081"}
+            - {name: DB_URL, value: "jdbc:postgresql://postgres:5432/productdb"}
+            - name: DB_USER
+              valueFrom: {secretKeyRef: {name: shop-secrets, key: DB_USER}}
+            - name: DB_PASSWORD
+              valueFrom: {secretKeyRef: {name: shop-secrets, key: DB_PASSWORD}}
+          startupProbe:
+            httpGet: {path: /actuator/health/liveness, port: 8081}
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet: {path: /actuator/health/readiness, port: 8081}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /actuator/health/liveness, port: 8081}
+            periodSeconds: 15
+          lifecycle:
+            preStop:
+              exec: {command: ["sleep", "5"]}
+          resources:
+            requests: {cpu: 250m, memory: 512Mi}
+            limits: {cpu: "1", memory: 768Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: article-service
+  namespace: shop
+spec:
+  type: ClusterIP
+  selector: {app: article-service}
+  ports:
+    - port: 8082
+      targetPort: 8082
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: article-service
+  namespace: shop
+  labels: {app: article-service}
+spec:
+  selector:
+    matchLabels: {app: article-service}
+  template:
+    metadata:
+      labels: {app: article-service}
+    spec:
+      terminationGracePeriodSeconds: 40
+      containers:
+        - name: app
+          image: IMAGE_PREFIX/article-service:IMAGE_TAG
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+          envFrom:
+            - configMapRef: {name: shop-config}
+          env:
+            - {name: SERVER_PORT, value: "8082"}
+            - {name: DB_URL, value: "jdbc:postgresql://postgres:5432/articledb"}
+            - name: DB_USER
+              valueFrom: {secretKeyRef: {name: shop-secrets, key: DB_USER}}
+            - name: DB_PASSWORD
+              valueFrom: {secretKeyRef: {name: shop-secrets, key: DB_PASSWORD}}
+          startupProbe:
+            httpGet: {path: /actuator/health/liveness, port: 8082}
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet: {path: /actuator/health/readiness, port: 8082}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /actuator/health/liveness, port: 8082}
+            periodSeconds: 15
+          lifecycle:
+            preStop:
+              exec: {command: ["sleep", "5"]}
+          resources:
+            requests: {cpu: 250m, memory: 512Mi}
+            limits: {cpu: "1", memory: 768Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+  namespace: shop
+spec:
+  type: ClusterIP
+  selector: {app: inventory-service}
+  ports:
+    - port: 8083
+      targetPort: 8083
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+  namespace: shop
+  labels: {app: inventory-service}
+spec:
+  selector:
+    matchLabels: {app: inventory-service}
+  template:
+    metadata:
+      labels: {app: inventory-service}
+    spec:
+      terminationGracePeriodSeconds: 40
+      containers:
+        - name: app
+          image: IMAGE_PREFIX/inventory-service:IMAGE_TAG
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8083
+          envFrom:
+            - configMapRef: {name: shop-config}
+          env:
+            - {name: SERVER_PORT, value: "8083"}
+            - {name: DB_URL, value: "jdbc:postgresql://postgres:5432/inventorydb"}
+            - name: DB_USER
+              valueFrom: {secretKeyRef: {name: shop-secrets, key: DB_USER}}
+            - name: DB_PASSWORD
+              valueFrom: {secretKeyRef: {name: shop-secrets, key: DB_PASSWORD}}
+          startupProbe:
+            httpGet: {path: /actuator/health/liveness, port: 8083}
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet: {path: /actuator/health/readiness, port: 8083}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /actuator/health/liveness, port: 8083}
+            periodSeconds: 15
+          lifecycle:
+            preStop:
+              exec: {command: ["sleep", "5"]}
+          resources:
+            requests: {cpu: 250m, memory: 512Mi}
+            limits: {cpu: "1", memory: 768Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: shop
+spec:
+  type: ClusterIP
+  selector: {app: order-service}
+  ports:
+    - port: 8084
+      targetPort: 8084
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: shop
+  labels: {app: order-service}
+spec:
+  selector:
+    matchLabels: {app: order-service}
+  template:
+    metadata:
+      labels: {app: order-service}
+    spec:
+      terminationGracePeriodSeconds: 40
+      containers:
+        - name: app
+          image: IMAGE_PREFIX/order-service:IMAGE_TAG
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8084
+          envFrom:
+            - configMapRef: {name: shop-config}
+          env:
+            - {name: SERVER_PORT, value: "8084"}
+            - {name: DB_URL, value: "jdbc:postgresql://postgres:5432/orderdb"}
+            - name: DB_USER
+              valueFrom: {secretKeyRef: {name: shop-secrets, key: DB_USER}}
+            - name: DB_PASSWORD
+              valueFrom: {secretKeyRef: {name: shop-secrets, key: DB_PASSWORD}}
+          startupProbe:
+            httpGet: {path: /actuator/health/liveness, port: 8084}
+            periodSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet: {path: /actuator/health/readiness, port: 8084}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /actuator/health/liveness, port: 8084}
+            periodSeconds: 15
+          lifecycle:
+            preStop:
+              exec: {command: ["sleep", "5"]}
+          resources:
+            requests: {cpu: 250m, memory: 512Mi}
+            limits: {cpu: "1", memory: 768Mi}

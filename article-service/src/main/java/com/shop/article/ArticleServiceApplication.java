@@ -1,0 +1,13 @@
+package com.shop.article;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
+
+@SpringBootApplication(scanBasePackages = "com.shop")
+@EnableCaching
+public class ArticleServiceApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(ArticleServiceApplication.class, args);
+    }
+}

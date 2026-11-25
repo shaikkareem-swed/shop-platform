@@ -1,0 +1,51 @@
+# KEDA: scale the Kafka consumers on consumer-group lag. KEDA creates and owns the HPA for these two,
+# so do NOT add a separate HPA. maxReplicaCount <= topic partitions (3).
+# Install KEDA first:  helm repo add kedacore https://kedacore.github.io/charts && helm install keda kedacore/keda -n keda --create-namespace
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: inventory-service-scaler
+  namespace: shop
+spec:
+  scaleTargetRef:
+    name: inventory-service
+  minReplicaCount: 1
+  maxReplicaCount: 3
+  cooldownPeriod: 120
+  pollingInterval: 15
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: kafka.shop.svc.cluster.local:9092
+        consumerGroup: inventory-service
+        topic: order-created
+        lagThreshold: "20"
+        offsetResetPolicy: earliest
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: order-service-scaler
+  namespace: shop
+spec:
+  scaleTargetRef:
+    name: order-service
+  minReplicaCount: 1
+  maxReplicaCount: 3
+  cooldownPeriod: 120
+  pollingInterval: 15
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: kafka.shop.svc.cluster.local:9092
+        consumerGroup: order-saga
+        topic: inventory-reserved
+        lagThreshold: "20"
+        offsetResetPolicy: earliest
+    - type: kafka
+      metadata:
+        bootstrapServers: kafka.shop.svc.cluster.local:9092
+        consumerGroup: order-projection
+        topic: order-events
+        lagThreshold: "50"
+        offsetResetPolicy: earliest

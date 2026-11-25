@@ -1,0 +1,58 @@
+server:
+  port: 8080
+  shutdown: graceful
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: product-service
+              uri: ${PRODUCT_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/products/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: productCb
+                    fallbackUri: forward:/fallback/product-service
+            - id: article-service
+              uri: ${ARTICLE_SERVICE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/articles/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: articleCb
+                    fallbackUri: forward:/fallback/article-service
+            - id: inventory-service
+              uri: ${INVENTORY_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/api/inventory/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: inventoryCb
+                    fallbackUri: forward:/fallback/inventory-service
+            - id: order-service
+              uri: ${ORDER_SERVICE_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/orders/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: orderCb
+                    fallbackUri: forward:/fallback/order-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
