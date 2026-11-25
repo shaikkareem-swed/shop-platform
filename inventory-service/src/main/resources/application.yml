@@ -11,10 +11,12 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/inventorydb}
     username: ${DB_USER:shop}
     password: ${DB_PASSWORD:shop}
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: update   # demo only - use Flyway/Liquibase for real environments
+      ddl-auto: validate   # schema is owned by Liquibase; Hibernate only checks it
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
     consumer:
